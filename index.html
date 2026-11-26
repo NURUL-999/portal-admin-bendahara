@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Portal Registrasi Admin | Alfatih - Bendahara</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Google Fonts: Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #f4f7f5;
+      color: #1e293b;
+    }
+    .modal-open { display: flex !important; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .fade-in { animation: fadeIn 0.22s ease-out forwards; }
+  </style>
+</head>
+<body class="antialiased selection:bg-emerald-600 selection:text-white min-h-screen flex flex-col">
+
+  <!-- Toast Notification -->
+  <div id="toast-container" class="fixed top-5 right-5 z-[100] flex flex-col gap-2.5 max-w-sm w-full pointer-events-none"></div>
+
+  <!-- =====================================================================
+       1. GERBANG MASTER PIN (KEAMANAN AKSES PORTAL ADMIN)
+       ===================================================================== -->
+  <div id="pin-gate-wrapper" class="min-h-screen flex items-center justify-center p-4 sm:p-6 bg-gradient-to-br from-slate-950 via-emerald-950 to-slate-900 relative overflow-hidden">
+    <div class="absolute -top-24 -left-24 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+    <div class="absolute -bottom-24 -right-24 w-96 h-96 bg-amber-400/10 rounded-full blur-3xl pointer-events-none"></div>
+
+    <div class="w-full max-w-md bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 p-6 sm:p-8 relative z-10 fade-in">
+      <div class="text-center mb-6">
+        <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-emerald-800 text-amber-300 shadow-lg shadow-emerald-900/30 mb-3">
+          <i data-lucide="shield-alert" class="w-7 h-7"></i>
+        </div>
+        <span class="inline-block text-[10px] font-extrabold uppercase tracking-widest px-3 py-1 rounded-full bg-amber-100 text-amber-800 mb-2">
+          Akses Terbatas Pengurus
+        </span>
+        <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">Portal Pembuat Admin</h1>
+        <p class="text-xs sm:text-sm text-slate-500 mt-1">Alfatih - Bendahara &bull; Sinkronisasi Cloud Firebase</p>
+      </div>
+
+      <form onsubmit="verifyMasterPin(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Masukkan Master PIN</label>
+          <div class="relative">
+            <i data-lucide="key-round" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+            <input type="password" id="master-pin-input" required inputmode="numeric" placeholder="Masukkan PIN keamanan..."
+              class="w-full pl-10 pr-10 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20 outline-none text-sm font-bold tracking-widest transition" />
+            <button type="button" onclick="togglePasswordVisibility('master-pin-input', this)"
+              class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+              <i data-lucide="eye" class="w-4 h-4"></i>
+            </button>
+          </div>
+          <p class="text-[11px] text-slate-400 mt-1.5">
+            PIN bawaan: <code class="font-bold text-slate-600">123456</code> (dapat diubah di baris <code class="text-slate-600">MASTER_PIN</code> pada kode).
+          </p>
+        </div>
+
+        <button type="submit"
+          class="w-full py-3 px-4 rounded-xl bg-emerald-800 hover:bg-emerald-900 active:scale-[0.99] text-white font-bold text-sm shadow-lg shadow-emerald-800/25 transition flex items-center justify-center gap-2">
+          <i data-lucide="unlock" class="w-4 h-4"></i>
+          <span>Buka Panel Registrasi Admin</span>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       2. HALAMAN UTAMA PEMBUATAN & DAFTAR AKUN ADMIN
+       ===================================================================== -->
+  <div id="admin-portal-wrapper" class="hidden flex-1 flex flex-col">
+    <!-- Top Bar -->
+    <header class="bg-emerald-950 text-white shadow-md sticky top-0 z-30">
+      <div class="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-md">
+            <i data-lucide="shield-check" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h1 class="font-extrabold text-base sm:text-lg leading-tight">Registrasi Akun Admin</h1>
+            <p class="text-[11px] text-emerald-300 font-medium">Terhubung ke Firebase Alfatih - Bendahara</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2.5">
+          <span id="cloud-status-badge" class="hidden sm:inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl bg-emerald-900/90 text-emerald-300 border border-emerald-700/60">
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+            <span>Firebase Terhubung</span>
+          </span>
+          <button type="button" onclick="lockPortal()"
+            class="px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition flex items-center gap-1.5 shadow-sm">
+            <i data-lucide="lock" class="w-3.5 h-3.5"></i>
+            <span>Kunci Portal</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+      <!-- Info Banner -->
+      <div class="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/80 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div class="flex items-start gap-3.5">
+          <div class="w-11 h-11 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
+            <i data-lucide="cloud-upload" class="w-6 h-6"></i>
+          </div>
+          <div>
+            <h2 class="text-base sm:text-lg font-extrabold text-slate-900">Sinkronisasi Otomatis ke Aplikasi Utama</h2>
+            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">
+              Setiap akun Admin yang dibuat di sini otomatis tersimpan ke Firebase dan langsung bisa digunakan untuk login di website <strong>Alfatih - Bendahara</strong>.
+            </p>
+          </div>
+        </div>
+
+        <button type="button" onclick="refreshAdminList()"
+          class="px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold text-xs transition flex items-center justify-center gap-2 shrink-0">
+          <i data-lucide="refresh-cw" class="w-4 h-4 text-emerald-700"></i>
+          <span>Segarkan Data</span>
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <!-- Form Buat Akun Admin -->
+        <div class="lg:col-span-5 bg-white p-6 sm:p-7 rounded-3xl border border-slate-200/80 shadow-sm">
+          <h3 class="text-base font-extrabold text-slate-900 mb-1 flex items-center gap-2">
+            <i data-lucide="user-plus" class="w-5 h-5 text-emerald-700"></i>
+            <span>Buat Akun Admin Baru</span>
+          </h3>
+          <p class="text-xs text-slate-500 mb-5">Isi data pengurus bendahara yang akan diberi akses Admin.</p>
+
+          <form id="create-admin-form" onsubmit="handleCreateAdmin(event)" class="space-y-4">
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Nama Lengkap Admin</label>
+              <input type="text" id="admin-fullname" required placeholder="Contoh: Muhammad Galih"
+                class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-emerald-600 outline-none text-sm font-medium" />
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Username Admin</label>
+              <input type="text" id="admin-username" required placeholder="Contoh: galih_01"
+                class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-emerald-600 outline-none text-sm font-medium" />
+              <p class="text-[11px] text-amber-700 font-semibold mt-1">
+                Wajib mengandung angka &amp; simbol (contoh: <code class="font-bold">galih_01</code> atau <code class="font-bold">admin#2</code>).
+              </p>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Kata Sandi</label>
+              <div class="relative">
+                <input type="text" id="admin-password" required minlength="6" placeholder="Minimal 6 karakter"
+                  class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-emerald-600 outline-none text-sm font-medium" />
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Peran Sistem</label>
+              <input type="text" readonly value="Admin Bendahara (Akses Penuh)"
+                class="w-full px-4 py-2.5 rounded-xl border border-emerald-200 bg-emerald-50/70 text-emerald-900 font-bold text-xs cursor-not-allowed" />
+            </div>
+
+            <button type="submit" id="btn-submit-admin"
+              class="w-full py-3 px-4 rounded-xl bg-emerald-700 hover:bg-emerald-800 active:scale-[0.99] text-white font-bold text-sm shadow-lg shadow-emerald-700/20 transition flex items-center justify-center gap-2 mt-2">
+              <i data-lucide="save" class="w-4 h-4"></i>
+              <span>Simpan Akun Admin ke Cloud</span>
+            </button>
+          </form>
+        </div>
+
+        <!-- Daftar Akun Admin Terdaftar di Firebase -->
+        <div class="lg:col-span-7 bg-white p-6 sm:p-7 rounded-3xl border border-slate-200/80 shadow-sm space-y-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
+                <i data-lucide="users" class="w-5 h-5 text-emerald-700"></i>
+                <span>Daftar Akun Admin Aktif</span>
+              </h3>
+              <p class="text-xs text-slate-500 mt-0.5">
+                Klik <strong>Salin Akun</strong> untuk membagikan Username &amp; Kata Sandi ke Admin bersangkutan.
+              </p>
+            </div>
+            <span id="admin-count-badge" class="text-xs font-extrabold px-3 py-1 rounded-full bg-emerald-100 text-emerald-800">
+              0 Admin
+            </span>
+          </div>
+
+          <div id="admin-list-container" class="space-y-3">
+            <div class="p-8 rounded-2xl border border-dashed border-slate-200 text-center text-xs sm:text-sm text-slate-400">
+              Memuat data akun Admin dari Firebase...
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- MODAL KONFIRMASI HAPUS -->
+  <div id="confirm-delete-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+    <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-100 text-center fade-in">
+      <div class="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto mb-3">
+        <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+      </div>
+      <h3 class="text-lg font-extrabold text-slate-900">Hapus Akun Admin?</h3>
+      <p id="confirm-delete-message" class="text-xs sm:text-sm text-slate-500 mt-1.5">
+        Akun ini tidak akan bisa lagi login sebagai Admin di aplikasi utama.
+      </p>
+      <div class="mt-6 grid grid-cols-2 gap-2.5">
+        <button type="button" onclick="closeConfirmDeleteModal()"
+          class="py-2.5 px-4 rounded-xl border border-slate-200 text-slate-700 font-bold text-sm hover:bg-slate-50">
+          Batal
+        </button>
+        <button type="button" id="btn-confirm-delete-yes"
+          class="py-2.5 px-4 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-sm shadow-md">
+          Ya, Hapus
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ========================================================================
+       KONFIGURASI FIREBASE & KEAMANAN PORTAL
+       ======================================================================== */
+    const CLOUD_DB_URL = 'https://bendahara-alfatih-pnb-default-rtdb.asia-southeast1.firebasedatabase.app';
+
+    // Ubah PIN ini sesuai keinginan Anda untuk mengunci halaman pembuatan Admin
+    const MASTER_PIN = '123456';
+
+    const PIN_SESSION_KEY = 'alfatih_admin_portal_unlocked';
+
+    const DEFAULT_ADMIN_USER = {
+      username: 'riski_123',
+      password: 'password123',
+      fullName: 'Riski',
+      role: 'admin',
+      avatar: '',
+      bio: '',
+      alamat: '',
+      noHp: ''
+    };
+
+    let allUsersCache = [];
+
+    function escapeHtml(str) {
+      return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toast-container');
+      if (!container) return;
+      const toast = document.createElement('div');
+      const styles = {
+        success: 'bg-emerald-800 text-white border-emerald-600',
+        error: 'bg-rose-600 text-white border-rose-500',
+        info: 'bg-slate-800 text-white border-slate-700'
+      };
+      toast.className = `pointer-events-auto px-4 py-3 rounded-2xl shadow-xl border text-xs sm:text-sm font-bold flex items-center gap-2.5 fade-in ${styles[type] || styles.info}`;
+      toast.textContent = message;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.25s ease';
+        setTimeout(() => toast.remove(), 250);
+      }, 3200);
+    }
+
+    function togglePasswordVisibility(inputId, btn) {
+      const input = document.getElementById(inputId);
+      if (!input) return;
+      const isPass = input.type === 'password';
+      input.type = isPass ? 'text' : 'password';
+      btn.innerHTML = `<i data-lucide="${isPass ? 'eye-off' : 'eye'}" class="w-4 h-4"></i>`;
+      if (window.lucide) lucide.createIcons();
+    }
+
+    // INIT
+    document.addEventListener('DOMContentLoaded', () => {
+      if (window.lucide) lucide.createIcons();
+      if (sessionStorage.getItem(PIN_SESSION_KEY) === 'true') {
+        unlockPortal();
+      }
+    });
+
+    function verifyMasterPin(event) {
+      event.preventDefault();
+      const inputPin = document.getElementById('master-pin-input').value.trim();
+      if (inputPin !== MASTER_PIN) {
+        showToast('Master PIN salah. Akses ditolak.', 'error');
+        return;
+      }
+      sessionStorage.setItem(PIN_SESSION_KEY, 'true');
+      showToast('Akses diverifikasi. Selamat datang!', 'success');
+      unlockPortal();
+    }
+
+    function unlockPortal() {
+      document.getElementById('pin-gate-wrapper').classList.add('hidden');
+      document.getElementById('admin-portal-wrapper').classList.remove('hidden');
+      if (window.lucide) lucide.createIcons();
+      refreshAdminList();
+    }
+
+    function lockPortal() {
+      sessionStorage.removeItem(PIN_SESSION_KEY);
+      document.getElementById('admin-portal-wrapper').classList.add('hidden');
+      document.getElementById('pin-gate-wrapper').classList.remove('hidden');
+      document.getElementById('master-pin-input').value = '';
+      showToast('Portal telah dikunci.', 'info');
+    }
+
+    // FIREBASE SYNC (MEMBACA & MENYIMPAN NODE USERS TANPA MENGGANGGU DATA SANTRI/LAPORAN)
+    function getUsersEndpoint() {
+      const base = CLOUD_DB_URL.trim().replace(/\/+$/, '');
+      return `${base}/alfatih_bendahara_store/users.json`;
+    }
+
+    async function fetchUsersFromFirebase() {
+      const badge = document.getElementById('cloud-status-badge');
+      try {
+        const res = await fetch(getUsersEndpoint(), { cache: 'no-store' });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+
+        let users = Array.isArray(data) ? data.filter(Boolean) : [];
+        if (users.length === 0) {
+          users = [{ ...DEFAULT_ADMIN_USER }];
+          await saveUsersToFirebase(users);
+        }
+
+        allUsersCache = users;
+        if (badge) {
+          badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400"></span><span>Firebase Terhubung</span>`;
+        }
+        return users;
+      } catch (err) {
+        if (badge) {
+          badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-400"></span><span>Gagal Koneksi Cloud</span>`;
+        }
+        showToast('Gagal terhubung ke Firebase. Periksa koneksi internet & Rules Firebase.', 'error');
+        return allUsersCache;
+      }
+    }
+
+    async function saveUsersToFirebase(usersArray) {
+      const res = await fetch(getUsersEndpoint(), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(usersArray)
+      });
+      if (!res.ok) throw new Error('Gagal menyimpan ke Firebase');
+      allUsersCache = usersArray;
+    }
+
+    async function refreshAdminList() {
+      const container = document.getElementById('admin-list-container');
+      container.innerHTML = `<div class="p-8 rounded-2xl border border-dashed border-slate-200 text-center text-xs sm:text-sm text-slate-400">Menyinkronkan data dari Firebase...</div>`;
+      const users = await fetchUsersFromFirebase();
+      renderAdminList(users);
+    }
+
+    function renderAdminList(users) {
+      const container = document.getElementById('admin-list-container');
+      const countBadge = document.getElementById('admin-count-badge');
+      const admins = users.filter((u) => u.role === 'admin');
+
+      countBadge.textContent = `${admins.length} Admin`;
+
+      if (admins.length === 0) {
+        container.innerHTML = `<div class="p-8 rounded-2xl border border-dashed border-slate-200 text-center text-xs sm:text-sm text-slate-400">Belum ada akun Admin terdaftar.</div>`;
+        return;
+      }
+
+      container.innerHTML = admins.map((adm) => {
+        const isDefault = adm.username.toLowerCase() === 'riski_123';
+        return `
+          <div class="p-4 rounded-2xl border border-slate-200/90 bg-slate-50/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="min-w-0">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="font-extrabold text-sm text-slate-900 truncate">${escapeHtml(adm.fullName)}</span>
+                <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">Admin Bendahara</span>
+                ${isDefault ? `<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">Utama</span>` : ''}
+              </div>
+              <p class="text-xs text-slate-500 mt-1">
+                Username: <span class="font-bold text-slate-800">${escapeHtml(adm.username)}</span> &bull;
+                Kata Sandi: <span class="font-bold text-slate-800">${escapeHtml(adm.password)}</span>
+              </p>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <button type="button" onclick="copyAdminCredentials('${escapeHtml(adm.username)}')"
+                class="px-3 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs transition flex items-center gap-1.5 shadow-xs">
+                <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                <span>Salin Akun</span>
+              </button>
+              ${!isDefault ? `
+                <button type="button" onclick="confirmDeleteAdmin('${escapeHtml(adm.username)}')"
+                  class="p-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 transition" title="Hapus Admin">
+                  <i data-lucide="trash-2" class="w-4 h-4"></i>
+                </button>` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      if (window.lucide) lucide.createIcons();
+    }
+
+    async function handleCreateAdmin(event) {
+      event.preventDefault();
+      const fullName = document.getElementById('admin-fullname').value.trim();
+      const username = document.getElementById('admin-username').value.trim();
+      const password = document.getElementById('admin-password').value;
+
+      if (fullName.length < 2) {
+        showToast('Nama lengkap minimal 2 karakter.', 'error');
+        return;
+      }
+      if (!/\d/.test(username) || !/[^a-zA-Z0-9]/.test(username)) {
+        showToast('Username Admin wajib mengandung angka dan simbol (contoh: galih_01).', 'error');
+        return;
+      }
+      if (password.length < 6) {
+        showToast('Kata sandi minimal 6 karakter.', 'error');
+        return;
+      }
+
+      const submitBtn = document.getElementById('btn-submit-admin');
+      submitBtn.disabled = true;
+
+      try {
+        const latestUsers = await fetchUsersFromFirebase();
+        if (latestUsers.some((u) => u.username.toLowerCase() === username.toLowerCase())) {
+          showToast(`Username "${username}" sudah digunakan. Pilih username lain.`, 'error');
+          submitBtn.disabled = false;
+          return;
+        }
+
+        const newAdmin = {
+          username,
+          password,
+          fullName,
+          role: 'admin',
+          avatar: '',
+          bio: '',
+          alamat: '',
+          noHp: ''
+        };
+
+        const updatedUsers = [...latestUsers, newAdmin];
+        await saveUsersToFirebase(updatedUsers);
+
+        document.getElementById('create-admin-form').reset();
+        renderAdminList(updatedUsers);
+        showToast(`Akun Admin "${username}" berhasil disimpan ke Firebase!`, 'success');
+      } catch (err) {
+        showToast('Terjadi kesalahan saat menyimpan akun Admin ke Firebase.', 'error');
+      } finally {
+        submitBtn.disabled = false;
+      }
+    }
+
+    function copyAdminCredentials(username) {
+      const target = allUsersCache.find((u) => u.username.toLowerCase() === username.toLowerCase());
+      if (!target) return;
+
+      const text = `Assalamu'alaikum ${target.fullName}.\nBerikut akun Admin aplikasi Alfatih - Bendahara:\nUsername: ${target.username}\nKata Sandi: ${target.password}`;
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+          showToast(`Username & Kata Sandi Admin "${target.fullName}" berhasil disalin!`, 'success');
+        });
+      } else {
+        prompt('Salin info login Admin berikut:', text);
+      }
+    }
+
+    function confirmDeleteAdmin(username) {
+      const target = allUsersCache.find((u) => u.username.toLowerCase() === username.toLowerCase());
+      if (!target) return;
+
+      document.getElementById('confirm-delete-message').textContent =
+        `Hapus akun Admin "${target.fullName}" (@${target.username}) dari Firebase?`;
+
+      const modal = document.getElementById('confirm-delete-modal');
+      modal.classList.remove('hidden');
+      modal.classList.add('modal-open');
+
+      document.getElementById('btn-confirm-delete-yes').onclick = async () => {
+        closeConfirmDeleteModal();
+        try {
+          const latestUsers = await fetchUsersFromFirebase();
+          const filtered = latestUsers.filter((u) => u.username.toLowerCase() !== username.toLowerCase());
+          await saveUsersToFirebase(filtered);
+          renderAdminList(filtered);
+          showToast(`Akun Admin "${username}" telah dihapus.`, 'success');
+        } catch (err) {
+          showToast('Gagal menghapus akun Admin dari Firebase.', 'error');
+        }
+      };
+    }
+
+    function closeConfirmDeleteModal() {
+      const modal = document.getElementById('confirm-delete-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('modal-open');
+    }
+  </script>
+</body>
+</html>
